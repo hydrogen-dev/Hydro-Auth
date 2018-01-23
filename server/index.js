@@ -11,7 +11,7 @@ const nodeModulesPath = path.join(__dirname, '../node_modules');
 // const baseUrl = 'https://qa.hydrogenplatform.com/v1';
 const baseUrl = 'http://api.hedgeable.ml:31343/v1';
 // const ethAddress = 'https://rinkeby.infura.io/y7OLwOvp7UNmvUcIoNmn';
-const ethAddress = 'wss://rinkeby.infura.io/ws';
+const ethAddress = 'wss://rinkeby.infura.io/ws'; //use websocket address to be able to listen to events
 
 const username = 'uspd2qunj8h2ra62nb50rk29gu';
 const key = '9kbspd941u06o8udn49hphlcvk';
@@ -20,7 +20,8 @@ const abi = require('./interface.json');
 const Tx = require('ethereumjs-tx');
 
 // const web3 = new Web3(new Web3.providers.HttpProvider(ethAddress));
-const web3 = new Web3((ethAddress));
+// using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
+const web3 = new Web3(ethAddress);
 const HydroContract = new web3.eth.Contract(abi, contractAddress);
 
 let hydroAddressId = 3;
@@ -42,49 +43,32 @@ function main() {
 
     if(!accountAddress) {
         return createAddress();
-    } else {
-        // return whitelist()
-    //     .then(res=>{
-    //         console.log('res',res)
-    //         return challenge()
-    //     })
-    //     .then(res=> {
-    //         console.log('res 1',res)
-    //         return raindrop()
-    //     })
-    //     .then(res=> {
-    //         console.log('res 2',res)
-    //         return authenticate()
-    //     })
-    //     .catch(err=>{
-    //         console.log('err',err)
-    //     })
-    }
-    // return createAddress()
+    } 
     if(!hydroAddressId) {
         return whitelist();
-    } else {
-        return challenge()
-        .then(res=> {
-            console.log('res 1',res)
-            return raindrop()
-        })
-        .then(res=> {
-            console.log('res 2',res)
-            return authenticate()
-        })
-        .catch(err=>{
-            console.log('err',err)
-        })
     }
+
+    return challenge()
+    .then(res => {
+        console.log('res challenge', res)
+        return raindrop()
+    })
+    .then(res => {
+        console.log('res raindrop', res)
+        return authenticate()
+    })
+    .then(res => {
+        console.log('res authenticate', res)
+    })
+    .catch(err=>{
+        console.log('err',err)
+    })
 }
 
 function createAddress() {
     let accountAddress = web3.eth.accounts.create();
-    console.log('accountAddressObj',accountAddressObj);
     return accountAddress;
 }
-
 
 //User requests to whitelist an Ethereum address
 //One-time thing the user does up front before attempting to authenticate
@@ -146,7 +130,6 @@ function challenge() {
         challengeString = response.challengeString;
         partnerId = response.partnerId;
         return response;
-		// res.send(response);
 	})
 	.catch(err => {
         console.log('err',err)
@@ -156,36 +139,34 @@ function challenge() {
 
 function raindrop() {
     return new Promise((resolve,reject) => {
-        // HydroContract.getPastEvents('Authenticate', null, function(error, events) { console.log('events', events); })
-        // HydroContract.methods.authenticate(amount, challengeString, partnerId).estimateGas()
-        // .then(res=>{
-        //     console.log('res gas',res) //24280
-        // })
-        // .catch(error=>{
-        //     console.log('error',error)
-        // })
-        // console.log('accountAddress',accountAddress)
-        //     let event2 = HydroContract.methods.authenticate(amount, challengeString, partnerId).send({from:accountAddress});
-        //     event2.then(res=>{
-        //         console.log('res event2',res)
-        //         HydroContract.events.Authenticate(null, (error, result) => {
-        //             console.log('Authenticate error',error)
-        //             console.log('Authenticate result',result)
-        //             if(error) return reject(error);
-        //             return resolve(result);            
-        //         })
-        //     })
-        // web3.eth.personal.unlockAccount(accountAddress);
+        
+        /*
+        let event = HydroContract.methods.authenticate(amount, challengeString, partnerId).send({from:accountAddress});
+            event.then(res=>{
+                console.log('res event2',res)
+                
+                // 1) one way to listen to Authenticate event
+                HydroContract.events.Authenticate(null, (error, result) => {
+                    console.log('Authenticate error',error)
+                    console.log('Authenticate result',result)
+                    if(error) return reject(error);
+                    return resolve(result);            
+                })
 
+                // 2) another way to listen to Authenticate event
+                HydroContract.once('Authenticate', {}, (error, result) => {
+                    console.log('Authenticate error',error)
+                    console.log('Authenticate result',result)
+                    if(error) return reject(error);
+                    return resolve(result);
+                })
+        })
+        */
+        
 
-        // web3.eth.accounts.wallet.clear();
-
-        // var account = web3.eth.accounts.privateKeyToAccount(privateKey);
-        // // console.log('web3.',web3.eth.getAccounts().then(res=>{console.log('res',res)}))
-
-        // let wallet = web3.eth.accounts.wallet.add(account)
-        // console.log('wallet',wallet)
-        // console.log('web3.eth.accounts.wallet',web3.eth.accounts.wallet)
+        /*
+        // additional random methods to test
+        HydroContract.getPastEvents('Authenticate', null, function(error, events) { console.log('events', events); })
 
 
         let validate = HydroContract.methods.validateAuthentication('0x6873faBF374bc1D1b5b5a6137522abC5EAB792E6','data',1).call();
@@ -194,21 +175,52 @@ function raindrop() {
             console.log('res',res)
         })
 
-        // let event1 = HydroContract.methods.getMoreTokens().send({from:accountAddress});
-        // let event1 = HydroContract.methods.getMoreTokens().send({from:accountAddress});
-
-        // console.log('HydroContract.methods.getMoreTokens',HydroContract.methods.getMoreTokens().encodeABI())
-
+        HydroContract.methods.authenticate(amount, challengeString, partnerId).estimateGas()
+        .then(res=>{
+            console.log('res gas',res) //24280
+        })
+        .catch(error=>{
+            console.log('error',error)
+        })
+        console.log('accountAddress',accountAddress)
         
+
+        web3.eth.personal.unlockAccount(accountAddress);
+        let account = web3.eth.accounts.privateKeyToAccount(privateKey);
+        // console.log('web3.',web3.eth.getAccounts().then(res=>{console.log('res',res)}))
+        web3.eth.accounts.wallet.clear();
+        let wallet = web3.eth.accounts.wallet.add(account)
+        console.log('wallet',wallet)
+        console.log('web3.eth.accounts.wallet',web3.eth.accounts.wallet)
+
+        */
+
+        /*
+        // 1) one way to send transaction using `send` method
+        let event = HydroContract.methods.getMoreTokens().send({from:accountAddress});
+        console.log('HydroContract.methods.getMoreTokens',HydroContract.methods.getMoreTokens().encodeABI())
+        let event = web3.eth.sendTransaction({to:contractAddress,from:accountAddress,data:getData});
+
+        event.then(res=>{
+            console.log('res event',res)
+        })
+        */
+        
+        /*
+        // 2) another way to send transaction using `sendTransaction` method
         let getData = HydroContract.methods.getMoreTokens().encodeABI();
-        // console.log('getData',getData)
-        // let event = web3.eth.sendTransaction({to:contractAddress,from:accountAddress,data:getData});
+        console.log('getData',getData)
+        let event = web3.eth.sendTransaction({to:contractAddress,from:accountAddress,data:getData});
 
-        // event.then(res=>{
-        //     console.log('res event',res)
-        // })
-        
+        event.then(res=>{
+            console.log('res event',res)
+        })
+        */
+
+        /*
+        // 3) another third way to send transaction using `sendSignedTransaction` method
         let privateKeyBuffer = new Buffer(privateKey, 'hex')
+        let getData = HydroContract.methods.getMoreTokens().encodeABI();
 
         let rawTx = {
           data: getData
@@ -220,45 +232,10 @@ function raindrop() {
         let serializedTx = tx.serialize();
 
         console.log(serializedTx.toString('hex'));
-        // 0xf889808609184e72a00082271094000000000000000000000000000000000000000080a47f74657374320000000000000000000000000000000000000000000000000000006000571ca08a8bbf888cfa37bbf0bb965423625641fc956967b81d12e23709cead01446075a01ce999b56a8a88504be365442ea61239198e23d1fce7d00fcfc5cd3b44b7215f
 
         web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
         .on('receipt', console.log);
-
-
-
-
-        // console.log('event1',event1)
-        // event1.then(res=>{
-        //     console.log('res event1',res)
-            // let event2 = HydroContract.methods.authenticate(amount, challengeString, partnerId).send({from:accountAddress});
-            // event2.then(res=>{
-            //     console.log('res event2',res)
-            //     HydroContract.events.Authenticate(null, (error, result) => {
-            //         console.log('Authenticate error',error)
-            //         console.log('Authenticate result',result)
-            //         if(error) return reject(error);
-            //         return resolve(result);            
-            //     })
-            //     .on('data', function(event){
-            //         console.log(event); // same results as the optional callback above
-            //     })
-            //     .on('changed', function(event){
-            //         // remove event from local database
-            //     })
-            //     .on('error', console.error);
-
-            // })
-
-            
-        // })
-
-        // HydroContract.once('Authenticate', {}, (error, result) => {
-        //     console.log('Authenticate error',error)
-        //     console.log('Authenticate result',result)
-        //     if(error) return reject(error);
-        //     return resolve(result);
-        // })
+        */
 
     })
 }
@@ -282,7 +259,8 @@ function authenticate() {
 
 	return rp(options)
 	.then(response => {
-		hydroAddressId = response
+        //returns hydroAddressId
+		console.log('response authenticate',response)
 	})
 	.catch(err => {
         console.log('err',err)
@@ -293,7 +271,6 @@ function authenticate() {
 // error handling
 app.use(function (err, req, res, next) {
     console.error(err);
-    // res.status(500).send(err.message);
 });
 
 app.listen(3000, function() {
