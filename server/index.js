@@ -7,7 +7,10 @@ const path = require('path');
 const Web3 = require('web3');
 const rp = require('request-promise');
 const nodeModulesPath = path.join(__dirname, '../node_modules');
+// const _ = require('lodash');
+// const SolidityFunction = require('web3/lib/web3/function');
 
+// console.log('SolidityFunction',SolidityFunction)
 // const baseUrl = 'https://qa.hydrogenplatform.com/v1';
 const baseUrl = 'http://api.hedgeable.ml:31343/v1';
 // const ethAddress = 'https://rinkeby.infura.io/y7OLwOvp7UNmvUcIoNmn';
@@ -18,6 +21,7 @@ const key = '9kbspd941u06o8udn49hphlcvk';
 const contractAddress = '0xed19C73C0caB93864986743378032798F1efA994';
 const abi = require('./interface.json');
 const Tx = require('ethereumjs-tx');
+const EUtil = require('ethereumjs-util');
 
 // const web3 = new Web3(new Web3.providers.HttpProvider(ethAddress));
 // using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
@@ -137,8 +141,7 @@ function challenge() {
 
 }
 
-function raindrop() {
-    return new Promise((resolve,reject) => {
+async function raindrop() {
         
         /*
         let event = HydroContract.methods.authenticate(amount, challengeString, partnerId).send({from:accountAddress});
@@ -193,51 +196,144 @@ function raindrop() {
         console.log('wallet',wallet)
         console.log('web3.eth.accounts.wallet',web3.eth.accounts.wallet)
 
-        */
+        // */
 
-        /*
         // 1) one way to send transaction using `send` method
-        let event = HydroContract.methods.getMoreTokens().send({from:accountAddress});
-        console.log('HydroContract.methods.getMoreTokens',HydroContract.methods.getMoreTokens().encodeABI())
-        let event = web3.eth.sendTransaction({to:contractAddress,from:accountAddress,data:getData});
+        // let event = await HydroContract.methods.getMoreTokens().send({from:accountAddress});
 
-        event.then(res=>{
-            console.log('res event',res)
-        })
-        */
         
-        /*
+        
         // 2) another way to send transaction using `sendTransaction` method
-        let getData = HydroContract.methods.getMoreTokens().encodeABI();
-        console.log('getData',getData)
-        let event = web3.eth.sendTransaction({to:contractAddress,from:accountAddress,data:getData});
+        // let getData = HydroContract.methods.getMoreTokens().encodeABI();
+        // console.log('getData',getData)
+        // let event2 = await web3.eth.sendTransaction({to:contractAddress,from:accountAddress,data:getData});
 
-        event.then(res=>{
-            console.log('res event',res)
-        })
-        */
+        // console.log('event2',event2)
+        
 
-        /*
+        
         // 3) another third way to send transaction using `sendSignedTransaction` method
-        let privateKeyBuffer = new Buffer(privateKey, 'hex')
-        let getData = HydroContract.methods.getMoreTokens().encodeABI();
+        // let privateKeyBuffer = new Buffer(privateKey, 'hex')
 
+        //default gas price
+        let account = web3.eth.accounts.privateKeyToAccount(privateKey);
+        console.log('account',account)
+        // let wallet = web3.eth.accounts.wallet;
+        // console.log('wallet before',wallet)
+        // let newWallet = web3.eth.accounts.wallet.add(account);
+        // console.log('newWallet',newWallet);
+        // console.log('wallet after',wallet)
+
+        //get gasprice
+        let price = await web3.eth.getGasPrice();
+        let priceHex = web3.utils.toHex(price);
+
+        let balance = await web3.eth.getBalance(accountAddress);
+        console.log('price',price,'priceHex',priceHex);
+        console.log('balance',balance);
+        // let gas = await web3.eth.estimateGas({data:getData});
+
+        let getBlock = await web3.eth.getBlock("latest")
+        // console.log('getBlock',getBlock)
+        let latestGasLimit = getBlock.gasLimit;
+        console.log('latestGasLimit',latestGasLimit)
+        let latestGasLimitHex = web3.utils.toHex(latestGasLimit);
+        console.log('latestGasLimitHex',latestGasLimitHex)
+        
+        let privateKeyBuffer = EUtil.toBuffer(privateKey, 'hex');
+
+        // let getData = HydroContract.methods.getMoreTokens().encodeABI();
+        // let gas = await HydroContract.methods.getMoreTokens().estimateGas()
+        // let gasHex = web3.utils.toHex(gas);
+        // console.log('gas',gas)
+        // console.log('gasHex',gasHex)
+
+
+        // let rawTx = {
+        //   data: getData,
+        //   gasLimit: latestGasLimitHex,
+        //   gasPrice: priceHex
+        // }
+        // let tx = new Tx(rawTx);
+        // tx.sign(privateKeyBuffer);
+
+        // let serializedTx = tx.serialize();
+
+        // console.log('serializedTx', serializedTx.toString('hex'));
+
+        // let receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+        // console.log('receipt',receipt);
+        
+        let nonce = await web3.eth.getTransactionCount(accountAddress);
+        console.log('nonce',nonce);
+        let nonceHex = web3.utils.toHex(nonce);
+        console.log('nonceHex',nonceHex);
+
+        // let getMoreTokensData = await HydroContract.methods.getMoreTokens().encodeABI();
+        // console.log('getMoreTokensData',getMoreTokensData);
+
+
+        // let getDataHex = web3.utils.toHex(getData);
+        // console.log('getDataHex',getDataHex) //same as original
+
+        //estimategas
+        // let gas = await HydroContract.methods.authenticate(amount, challengeString, partnerId).estimateGas({from:accountAddress});
+        // console.log('gas',gas)
+        // let gasHex = web3.utils.toHex(gas);
+        // console.log('gasHex',gasHex)
+
+        // let gas2 = await web3.eth.estimateGas({from:accountAddress,to:contractAddress,data:getData});
+        // console.log('gas2',gas2)
+
+        // let value = web3.utils.toHex(web3.utils.toWei(amount,'ether'));
+
+
+        // let rawTx1 = {
+        //   nonce: nonceHex,
+        //   gasPrice: priceHex,
+        //   gasLimit: latestGasLimitHex,
+        //   to: contractAddress,
+        //   from: accountAddress,
+        //   // value: priceHex,
+        //   data: getMoreTokensData
+        // }
+        // let tx1 = new Tx(rawTx1);
+        // tx1.sign(privateKeyBuffer);
+
+        // let serializedTx1 = tx1.serialize();
+
+        // console.log('serializedTx1', serializedTx1.toString('hex'));
+
+        // let receipt1 = await web3.eth.sendSignedTransaction('0x' + serializedTx1.toString('hex'))
+        // console.log('receipt1',receipt1);
+
+
+        // return receipt1;
+
+
+        let getData = await HydroContract.methods.authenticate(amount, challengeString, partnerId).encodeABI();
+        console.log('getData',getData)
         let rawTx = {
+          nonce: nonceHex,
+          gasPrice: priceHex,
+          gasLimit: latestGasLimitHex,
+          to: contractAddress,
+          from: accountAddress,
+          // value: priceHex,
           data: getData
         }
-
         let tx = new Tx(rawTx);
         tx.sign(privateKeyBuffer);
 
         let serializedTx = tx.serialize();
 
-        console.log(serializedTx.toString('hex'));
+        console.log('serializedTx', serializedTx.toString('hex'));
 
-        web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-        .on('receipt', console.log);
-        */
+        let receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+        console.log('receipt',receipt);
+        // return receipt;
+        
 
-    })
 }
 
 function authenticate() {
