@@ -10,8 +10,10 @@ const nodeModulesPath = path.join(__dirname, '../node_modules');
 const baseUrl = 'http://api.hedgeable.ml:31343/v1';
 // const ethAddress = 'https://rinkeby.infura.io/y7OLwOvp7UNmvUcIoNmn';
 const ethAddress = 'wss://rinkeby.infura.io/ws'; //use websocket address to be able to listen to events
-const username = 'uspd2qunj8h2ra62nb50rk29gu';
-const key = '9kbspd941u06o8udn49hphlcvk';
+// const username = 'uspd2qunj8h2ra62nb50rk29gu';
+// const key = '9kbspd941u06o8udn49hphlcvk';
+const username = 'dkvmdl4bl1hdr2cka4pniojuc2';
+const key = 'l049h703idvj1huir3hsm4ga14';
 const contractAddress = '0xed19C73C0caB93864986743378032798F1efA994';
 const abi = require('./interface.json');
 const Tx = require('ethereumjs-tx');
@@ -22,7 +24,7 @@ const EUtil = require('ethereumjs-util');
 const web3 = new Web3(ethAddress);
 const HydroContract = new web3.eth.Contract(abi, contractAddress);
 
-let hydro_address_id = 3; //from whitelisting
+let hydro_address_id = 4; //from whitelisting
 let amount;
 let challenge_string;
 let partner_id;
@@ -159,6 +161,7 @@ async function raindrop() {
         console.log('latestGasLimit',latestGasLimit)
 
         let latestGasLimitHex = web3.utils.toHex(latestGasLimit);
+
         console.log('latestGasLimitHex',latestGasLimitHex)
         
         // let privateKeyBuffer = new Buffer(privateKey, 'hex') //from documentation - doesn't work
@@ -176,12 +179,12 @@ async function raindrop() {
             console.log('getMoreTokensData',getMoreTokensData);
 
             // used to estimate gas
-            // let gas = await HydroContract.methods.getMoreTokens().estimateGas()
+            let gas = await HydroContract.methods.getMoreTokens().estimateGas()
 
             // converts into hex
-            // let gasHex = web3.utils.toHex(gas);
-            // console.log('gas',gas)
-            // console.log('gasHex',gasHex)
+            let gasHex = web3.utils.toHex(gas);
+            console.log('gas',gas)
+            console.log('gasHex',gasHex)
 
             let rawTx1 = {
               nonce: nonceHex,
@@ -216,17 +219,20 @@ async function raindrop() {
             // console.log('gas',gas)
 
             //another way to estimate gas
-            // let gas2 = await web3.eth.estimateGas({from:accountAddress,to:contractAddress,data:getData});
-            // console.log('gas2',gas2)
+            let gas2 = await web3.eth.estimateGas({from:accountAddress,to:contractAddress,data:getData});
+            console.log('gas2',gas2)
 
             //convert into hex
-            // let gasHex = web3.utils.toHex(gas);
-            // console.log('gasHex',gasHex)
+            let gasHex = web3.utils.toHex(gas2);
+            console.log('gasHex',gasHex)
+
+            //for gasLimit used latestGasLimitHex, but use gasHex ideally(?)
+            //getting gas estimate throws error for now "gas required exceeds allowance or always failing transaction"
 
             let rawTx = {
               nonce: nonceHex,
               gasPrice: priceHex,
-              gasLimit: latestGasLimitHex,
+              gasLimit: gasHex,
               to: contractAddress,
               from: accountAddress,
               data: getData
@@ -245,6 +251,7 @@ async function raindrop() {
             
         }
 
+        // return getMoreTokens();
         return authenticateTransaction();
 
     
