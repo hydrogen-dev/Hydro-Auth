@@ -11,17 +11,17 @@ const abi = require('./interface.json');
 const Tx = require('ethereumjs-tx');
 const EUtil = require('ethereumjs-util');
 
-const baseUrl = 'http://api.hedgeable.ml:31343/v1';
+const baseUrl = 'http://api.hedgeable.ml:31343';
 const ethAddress = 'wss://rinkeby.infura.io/ws'; //use websocket address to be able to listen to events
 const username = 'dkvmdl4bl1hdr2cka4pniojuc2';
 const key = 'l049h703idvj1huir3hsm4ga14';
-const contractAddress = '0xed19C73C0caB93864986743378032798F1efA994';
+const contractAddress = '0xEFb8Ba35C4C502EA9035e093F59925C4B5B61482';
 
 // using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
 const web3 = new Web3(ethAddress);
 const HydroContract = new web3.eth.Contract(abi, contractAddress);
 
-let hydro_address_id = 4; //from whitelisting
+let hydro_address_id = 3; //from whitelisting
 let amount;
 let challenge_string;
 let partner_id;
@@ -122,7 +122,7 @@ async function requestChallengeDetails() {
         const response = await request(options);
         console.log('response from challenge',response);
         amount = response.amount;
-        challenge_string = response.challenge_string;
+        challenge_string = response.challenge_string.toString();
         partner_id = response.partner_id;
 
         return Promise.resolve(response);
