@@ -5,21 +5,18 @@ const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const path = require('path');
 const Web3 = require('web3');
-const rp = require('request-promise');
+const request = require('request-promise');
 const nodeModulesPath = path.join(__dirname, '../node_modules');
-const baseUrl = 'http://api.hedgeable.ml:31343/v1';
-// const ethAddress = 'https://rinkeby.infura.io/y7OLwOvp7UNmvUcIoNmn';
-const ethAddress = 'wss://rinkeby.infura.io/ws'; //use websocket address to be able to listen to events
-// const username = 'uspd2qunj8h2ra62nb50rk29gu';
-// const key = '9kbspd941u06o8udn49hphlcvk';
-const username = 'dkvmdl4bl1hdr2cka4pniojuc2';
-const key = 'l049h703idvj1huir3hsm4ga14';
-const contractAddress = '0xed19C73C0caB93864986743378032798F1efA994';
 const abi = require('./interface.json');
 const Tx = require('ethereumjs-tx');
 const EUtil = require('ethereumjs-util');
 
-// const web3 = new Web3(new Web3.providers.HttpProvider(ethAddress));
+const baseUrl = 'http://api.hedgeable.ml:31343/v1';
+const ethAddress = 'wss://rinkeby.infura.io/ws'; //use websocket address to be able to listen to events
+const username = 'dkvmdl4bl1hdr2cka4pniojuc2';
+const key = 'l049h703idvj1huir3hsm4ga14';
+const contractAddress = '0xed19C73C0caB93864986743378032798F1efA994';
+
 // using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
 const web3 = new Web3(ethAddress);
 const HydroContract = new web3.eth.Contract(abi, contractAddress);
@@ -30,6 +27,7 @@ let challenge_string;
 let partner_id;
 let accountAddress = '0xF082A16f34984Cb897baC3634E6962cA35825AB8';
 let privateKey = '0x3479ace7f172c1ad48f31e4724ef7774b464a09b64a9b947b5df4b9413223218';
+let isAuthenticated;
 
 app.use(cors());
 app.use(morgan('dev'));
@@ -39,41 +37,40 @@ app.use(bodyParser.json());
 
 main();
 
-function main() {
+async function main() {
 
-    if(!accountAddress) {
-        return createAddress();
-    } 
-    if(!hydro_address_id) {
-        return whitelist();
+    try {
+
+        if(!accountAddress) {
+            await createAddress();
+        } 
+
+        if(!hydro_address_id) {
+            await whitelistAddress();
+        }
+
+        await requestChallengeDetails();
+        await performRaindrop();
+
+        isAuthenticated = await listenToAuthenticateEvent();
+        console.log('isAuthenticated',isAuthenticated);
+
+    } catch (error) {
+
+        console.error(error);
+
     }
-
-    return challenge()
-    .then(res => {
-        return raindrop()
-    })
-    .then(res => {
-        return authenticate()
-    })
-    .then(res => {
-        console.log('res authenticate', res)
-        listenToAuthenticateEvent();
-    })
-    .catch(err=>{
-        console.log('err',err)
-    })
 }
 
 async function createAddress() {
-    let accountAddress = await web3.eth.accounts.create();
+    const accountAddress = await web3.eth.accounts.create();
     return accountAddress;
 }
 
-//User requests to whitelist an Ethereum address
-//One-time thing the user does up front before attempting to authenticate
-async function whitelist() {
+//User requests to whitelist an Ethereum address (one-time)
+//returns hydro_address_id
+async function whitelistAddress() {
 
-    const auth = new Buffer(username + ':' + key).toString('base64');
     const options = {
         method: 'POST',
         uri: `${baseUrl}/whitelist/${accountAddress}`,
@@ -89,24 +86,21 @@ async function whitelist() {
     };
 
     try {
-        const response = await rp(options);   
-        console.log('response from whitelist',response)
+        const response = await request(options);   
+        console.log('response from whitelist',response);
 		hydro_address_id = response;
         return Promise.resolve(response);
     }
     catch (error) {
         Promise.reject(error);
     }
-	
+
 }
 
-
-//User requests challenge details
+//Requests challenge details
 //Returns amount, challenge_string, and partner_id
+async function requestChallengeDetails() {
 
-async function challenge() {
-
-    const auth = new Buffer(username + ':' + key).toString('base64');
     const options = {
         method: 'POST',
         uri: `${baseUrl}/challenge`,
@@ -125,11 +119,12 @@ async function challenge() {
     };
 
     try {
-        const response = await rp(options);
-        console.log('response from challenge',response)
+        const response = await request(options);
+        console.log('response from challenge',response);
         amount = response.amount;
         challenge_string = response.challenge_string;
         partner_id = response.partner_id;
+
         return Promise.resolve(response);
     }
     catch (error) {
@@ -138,132 +133,10 @@ async function challenge() {
 
 }
 
-async function raindrop() {
-    try {
+//Checks if address is authenticated
+//Returns boolean
+async function checkIfAuthenticated() {
 
-        //default gas price
-        let account = web3.eth.accounts.privateKeyToAccount(privateKey);
-        console.log('account',account)
-
-        //get gasprice
-        let price = await web3.eth.getGasPrice();
-        // let price = 10000000000;
-        let priceHex = web3.utils.toHex(price);
-
-        let balance = await web3.eth.getBalance(accountAddress);
-        console.log('price',price,'priceHex',priceHex);
-        console.log('balance',balance);
-
-        let getBlock = await web3.eth.getBlock("latest")
-        // console.log('getBlock',getBlock)
-        let latestGasLimit = getBlock.gasLimit;
-        // let latestGasLimit = 40000;
-        console.log('latestGasLimit',latestGasLimit)
-
-        let latestGasLimitHex = web3.utils.toHex(latestGasLimit);
-
-        console.log('latestGasLimitHex',latestGasLimitHex)
-        
-        // let privateKeyBuffer = new Buffer(privateKey, 'hex') //from documentation - doesn't work
-        let privateKeyBuffer = EUtil.toBuffer(privateKey, 'hex');
-
-        let nonce = await web3.eth.getTransactionCount(accountAddress);
-        console.log('nonce',nonce);
-
-        let nonceHex = web3.utils.toHex(nonce);
-        console.log('nonceHex',nonceHex);
-
-        //get more tokens
-        async function getMoreTokens() {
-            let getMoreTokensData = await HydroContract.methods.getMoreTokens().encodeABI();
-            console.log('getMoreTokensData',getMoreTokensData);
-
-            // used to estimate gas
-            let gas = await HydroContract.methods.getMoreTokens().estimateGas()
-
-            // converts into hex
-            let gasHex = web3.utils.toHex(gas);
-            console.log('gas',gas)
-            console.log('gasHex',gasHex)
-
-            let rawTx1 = {
-              nonce: nonceHex,
-              gasPrice: priceHex,
-              gasLimit: latestGasLimitHex,
-              to: contractAddress,
-              from: accountAddress,
-              data: getMoreTokensData
-            }
-
-            let tx1 = new Tx(rawTx1);
-            tx1.sign(privateKeyBuffer);
-
-            let serializedTx1 = tx1.serialize();
-
-            console.log('serializedTx1', serializedTx1.toString('hex'));
-
-            let receipt1 = await web3.eth.sendSignedTransaction('0x' + serializedTx1.toString('hex'))
-            console.log('receipt1',receipt1);
-
-            return receipt1;
-        }
-
-        //authenticate
-        async function authenticateTransaction() {
-
-            let getData = await HydroContract.methods.authenticate(amount, challenge_string, partner_id).encodeABI();
-            console.log('getData',getData)
-
-            //one way to estimate gas
-            // let gas = await HydroContract.methods.authenticate(amount, challenge_string, partner_id).estimateGas({from:accountAddress});
-            // console.log('gas',gas)
-
-            //another way to estimate gas
-            let gas2 = await web3.eth.estimateGas({from:accountAddress,to:contractAddress,data:getData});
-            console.log('gas2',gas2)
-
-            //convert into hex
-            let gasHex = web3.utils.toHex(gas2);
-            console.log('gasHex',gasHex)
-
-            //for gasLimit used latestGasLimitHex, but use gasHex ideally(?)
-            //getting gas estimate throws error for now "gas required exceeds allowance or always failing transaction"
-
-            let rawTx = {
-              nonce: nonceHex,
-              gasPrice: priceHex,
-              gasLimit: gasHex,
-              to: contractAddress,
-              from: accountAddress,
-              data: getData
-            }
-
-            let tx = new Tx(rawTx);
-            tx.sign(privateKeyBuffer);
-
-            let serializedTx = tx.serialize();
-
-            console.log('serializedTx', serializedTx.toString('hex'));
-
-            let receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-            console.log('receipt',receipt);
-            return receipt;
-            
-        }
-
-        // return getMoreTokens();
-        return authenticateTransaction();
-
-    
-    } catch (error) {
-        console.error(error);
-    }
-
-}
-
-async function authenticate() {
-
-    const auth = new Buffer(username + ':' + key).toString('base64');
     const options = {
         method: 'POST',
         uri: `${baseUrl}/authenticate/${accountAddress}`,
@@ -279,34 +152,101 @@ async function authenticate() {
     };
 
     try {
-        const response = await rp(options);
+        const response = await request(options);
         //returns hydro_address_id
-        console.log('response from authenticate',response)
+        console.log('response from authenticate',response);
         return Promise.resolve(response);
     }
     catch (error) {
         Promise.reject(error);
     }
-	
+    
 }
 
-function listenToAuthenticateEvent() {
-    // 1) one way to listen to Authenticate event
-    HydroContract.events.Authenticate(null, (error, result) => {
-        console.log('Authenticate error',error)
-        console.log('Authenticate result',result)
-        if(error) return reject(error);
-        return resolve(result);            
+//Listens to `Authenticate` event in the contract
+async function listenToAuthenticateEvent() {
+
+    await HydroContract.events.Authenticate(null, async (error, result) => {
+        console.error('Authenticate error',error);
+        console.log('Authenticate result',result);
+        await checkIfAuthenticated();
     })
 
-    // 2) another way to listen to Authenticate event
-    HydroContract.once('Authenticate', {}, (error, result) => {
-        console.log('Authenticate error',error)
-        console.log('Authenticate result',result)
-        if(error) return reject(error);
-        return resolve(result);
-    })
 }
+
+//Listens to `sendSignedTransaction` method in the contract
+async function sendSignedTransaction(privateKey, nonce, gasPrice, gasLimit, to, from, data) {
+
+    const rawTx1 = {
+      nonce: nonce,
+      gasPrice: gasPrice,
+      gasLimit: gasLimit,
+      to: to,
+      from: from,
+      data: data
+    };
+
+    const tx1 = new Tx(rawTx1);
+    tx1.sign(privateKey);
+
+    const serializedTx = tx1.serialize();
+
+    console.log('serializedTx', serializedTx.toString('hex'));
+
+    const receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'));
+    console.log('receipt',receipt);
+
+    return receipt;
+}
+
+async function performRaindrop() {
+
+    //get account object
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    console.log('account',account);
+
+    //get gas price
+    const price = await web3.eth.getGasPrice();
+    const priceHex = web3.utils.toHex(price);
+    console.log('price',price,'priceHex',priceHex);
+
+    //check balance
+    const balance = await web3.eth.getBalance(accountAddress);
+    console.log('balance',balance);
+
+    //get gas limit on latest block
+    const getBlock = await web3.eth.getBlock("latest");
+    const latestGasLimit = getBlock.gasLimit;
+    console.log('latestGasLimit',latestGasLimit);
+    const latestGasLimitHex = web3.utils.toHex(latestGasLimit);
+    console.log('latestGasLimitHex',latestGasLimitHex);
+    
+    //convert private key into buffer
+    const privateKeyBuffer = EUtil.toBuffer(privateKey, 'hex');
+    console.log('privateKeyBuffer',privateKeyBuffer);
+
+    //get nonce via transaction count
+    const nonce = await web3.eth.getTransactionCount(accountAddress);
+    console.log('nonce',nonce);
+    const nonceHex = web3.utils.toHex(nonce);
+    console.log('nonceHex',nonceHex);
+
+    //get abi for get more token method in the contract
+    const getMoreTokensData = await HydroContract.methods.getMoreTokens().encodeABI();
+    console.log('getMoreTokensData',getMoreTokensData);
+
+    //get abi for authenticate method in the contract
+    const getAuthenticateData = await HydroContract.methods.authenticate(amount, challenge_string, partner_id).encodeABI();
+    console.log('getAuthenticateData',getAuthenticateData);
+
+    //get receipt for requesting more hydros
+    let getMoreTokensReceipt = await sendSignedTransaction(privateKeyBuffer, nonceHex, priceHex, latestGasLimitHex, contractAddress, accountAddress, getMoreTokensData);
+    console.log('getMoreTokensReceipt',getMoreTokensReceipt);
+    //get receipt for authenticate
+    let authenticateReceipt = await sendSignedTransaction(privateKeyBuffer, nonceHex, priceHex, latestGasLimitHex, contractAddress, accountAddress, getAuthenticateData);
+    console.log('authenticateReceipt',authenticateReceipt);
+}
+
 
 // error handling
 app.use(function (err, req, res, next) {
