@@ -86,7 +86,6 @@ async function createAddress() {
 
 }
 
-//Via Hydro API
 //User requests to whitelist an Ethereum address (one-time)
 //returns hydro_address_id
 async function whitelistAddress() {
@@ -112,7 +111,6 @@ async function whitelistAddress() {
 
 }
 
-//Via Hydro API
 //Requests challenge details
 //Returns amount, challenge_string, and partner_id
 async function requestChallengeDetails() {
@@ -141,7 +139,6 @@ async function requestChallengeDetails() {
 
 }
 
-//Via Hydro API
 //Checks if address is authenticated
 //Returns boolean
 async function authenticatedWithHydro() {
@@ -255,7 +252,7 @@ async function performRaindrop() {
         //get abi for `authenticate` method in the contract
         const getAuthenticateData = await HydroContract.methods.authenticate(amount, challenge_string, partner_id).encodeABI();
 
-       // used to estimate gas for `getMoreTokens`
+        //estimate gas for `getMoreTokens`
         const gasForGetMoreTokens = await HydroContract.methods.getMoreTokens().estimateGas()
         const gasHexForGetMoreTokens = web3.utils.toHex(gasForGetMoreTokens);
         console.log(chalk.green('gasForGetMoreTokens'),gasForGetMoreTokens)
@@ -270,7 +267,7 @@ async function performRaindrop() {
         const newNonceHex = web3.utils.toHex(newNonce);
         console.log(chalk.green('newNonce'),newNonce);
 
-        //one way to estimate gas for `authenticate`
+        //estimate gas for `authenticate`
         const gasForAuthenticate = await HydroContract.methods.authenticate(amount, challenge_string, partner_id).estimateGas({from:accountAddress, gas:latestGasLimit});
         const gasHexForAuthenticate = web3.utils.toHex(gasForAuthenticate);
         console.log(chalk.green('gasForAuthenticate'),gasForAuthenticate);
@@ -292,7 +289,7 @@ app.use(function (err, req, res, next) {
 });
 
 app.listen(3000, function() {
-	console.log(chalk.bold('listening on port 3000...'));
+    console.log(chalk.bold('listening on port 3000...'));
     //execute our script!
     main();
 });
