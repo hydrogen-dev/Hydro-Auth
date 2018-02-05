@@ -66,7 +66,7 @@ async function main() {
 
         //listen to `Authenticate` event in the contract, and check if authenticated via Hydro API
         console.log(chalk.magentaBright('checking if we are authenticated via Hydro API...'));
-        await listenToAuthenticateEvent();
+        await checkAuthenticated();
     }
     catch (error) {
         console.error(chalk.red('error'), error);
@@ -144,14 +144,17 @@ async function requestChallengeDetails() {
 //Via Hydro API
 //Checks if address is authenticated
 //Returns boolean
-async function checkIfAuthenticated() {
+async function authenticatedWithHydro() {
 
     try {
         const options = {
             method: 'POST',
-            uri: `${baseUrl}/authenticate/${accountAddress}`,
+            uri: `${baseUrl}/authenticate`,
             headers: {
               'Content-Type': 'application/json'
+            },
+            qs: {
+                hydro_address_id: hydro_address_id
             },
             body: {
                 username: username,
@@ -167,10 +170,10 @@ async function checkIfAuthenticated() {
     
 }
 
-async function listenToAuthenticateEvent() {
+async function checkAuthenticated() {
 
     try {
-        const isAuthenticated = await checkIfAuthenticated();
+        const isAuthenticated = await authenticatedWithHydro();
         console.log(chalk.magentaBright('Checking, are we authenticated with the Hydro API?'), isAuthenticated)
 
         //Listens to `Authenticate` event in the contract
@@ -178,7 +181,7 @@ async function listenToAuthenticateEvent() {
             try {
                 console.log(chalk.red('error for `Authenticate` event in the contract'), error);
                 console.log(chalk.green('result for `Authenticate` event in the contract'), result);
-                const isAuthenticated2 = await checkIfAuthenticated();
+                const isAuthenticated2 = await authenticatedWithHydro();
                 console.log(chalk.magentaBright('Checking again, are we authenticated with the Hydro API?'), isAuthenticated2)
             }
             catch (error) {
