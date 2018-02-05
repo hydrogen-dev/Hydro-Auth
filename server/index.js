@@ -64,9 +64,9 @@ async function main() {
         console.log(chalk.magentaBright('starting to perform raindrop...'));
         await performRaindrop();
 
-        //listen to `Authenticate` event in the contract, and check if authenticated via Hydro API
-        console.log(chalk.magentaBright('checking if we are authenticated via Hydro API...'));
-        await checkAuthenticated();
+        //check if authenticated via Hydro API
+        console.log(chalk.magentaBright('checking if we are authenticated...'));
+        await checkIfAuthenticated();
     }
     catch (error) {
         console.error(chalk.red('error'), error);
@@ -170,24 +170,11 @@ async function authenticatedWithHydro() {
     
 }
 
-async function checkAuthenticated() {
+async function checkIfAuthenticated() {
 
     try {
         const isAuthenticated = await authenticatedWithHydro();
-        console.log(chalk.magentaBright('Checking, are we authenticated with the Hydro API?'), isAuthenticated)
-
-        //Listens to `Authenticate` event in the contract
-        await HydroContract.events.Authenticate(null, async (error, result) => {
-            try {
-                console.log(chalk.red('error for `Authenticate` event in the contract'), error);
-                console.log(chalk.green('result for `Authenticate` event in the contract'), result);
-                const isAuthenticated2 = await authenticatedWithHydro();
-                console.log(chalk.magentaBright('Checking again, are we authenticated with the Hydro API?'), isAuthenticated2)
-            }
-            catch (error) {
-                Promise.error(error);
-            }
-        })
+        console.log(chalk.greenBright('Are we authenticated with the Hydro API?'), isAuthenticated)
     }
     catch (error) {
         return Promise.reject(error);
@@ -283,10 +270,14 @@ async function performRaindrop() {
         const newNonceHex = web3.utils.toHex(newNonce);
         console.log(chalk.green('newNonce'),newNonce);
 
+        //one way to estimate gas for `authenticate`
+        const gasForAuthenticate = await HydroContract.methods.authenticate(amount, challenge_string, partner_id).estimateGas({from:accountAddress, gas:latestGasLimit});
+        const gasHexForAuthenticate = web3.utils.toHex(gasForAuthenticate);
+        console.log(chalk.green('gasForAuthenticate'),gasForAuthenticate);
+
         //get receipt for authenticate
-        //using `latestGasLimitHex` variable from `getBlock("latest")` instead of `estimateGas`
         console.log(chalk.magentaBright('requesting to authenticate...'));
-        const authenticateReceipt = await sendSignedTransaction(privateKeyBuffer, newNonceHex, priceHex, latestGasLimitHex, contractAddress, accountAddress, getAuthenticateData);
+        const authenticateReceipt = await sendSignedTransaction(privateKeyBuffer, newNonceHex, priceHex, gasHexForAuthenticate, contractAddress, accountAddress, getAuthenticateData);
         console.log(chalk.green('authenticateReceipt'),authenticateReceipt);
     }
     catch (error) {
