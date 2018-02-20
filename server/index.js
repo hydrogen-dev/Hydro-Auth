@@ -20,9 +20,9 @@ const contractAddress = '0xEFb8Ba35C4C502EA9035e093F59925C4B5B61482'; //contract
 const web3 = new Web3(ethAddress); // using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
 const HydroContract = new web3.eth.Contract(abi, contractAddress);
 
-let hydro_address_id = 3; //demo hydro_address_id from whitelisting
+let hydro_address_id = '96b043ba-a27c-44bb-af56-9e933cc94802'; //demo hydro_address_id from whitelisting
 let amount;
-let challenge_string;
+let challenge;
 let partner_id;
 let accountAddress = '0xF082A16f34984Cb897baC3634E6962cA35825AB8'; //demo account address (plug in your own)
 let privateKey = '0x3479ace7f172c1ad48f31e4724ef7774b464a09b64a9b947b5df4b9413223218'; //demo private key associated with account address (plug in your own)
@@ -48,16 +48,16 @@ async function main() {
         if(!hydro_address_id) {
             //one-time whitelist via Hydro API
             console.log(chalk.magentaBright('requesting to whitelist via Hydro API...'));
-            hydro_address_id = await whitelistAddress();
+            hydro_address_id = await whitelistAddress().hydro_address_id;
             console.log(chalk.green('hydro_address_id'),hydro_address_id);
         }
-        if(!amount && !challenge_string && !partner_id) {
+        if(!amount && !challenge && !partner_id) {
             //ask for "challenge details" via Hydro API
             console.log(chalk.magentaBright('requesting challenge details via Hydro API...'));
             const data = await requestChallengeDetails();
             console.log(chalk.green('data'),data);
             amount = data.amount;
-            challenge_string = data.challenge_string;
+            challenge = data.challenge;
             partner_id = data.partner_id;
         }
         //perform "raindrop" by calling methods in the contract
@@ -67,6 +67,8 @@ async function main() {
         //check if authenticated via Hydro API
         console.log(chalk.magentaBright('checking if we are authenticated...'));
         await checkIfAuthenticated();
+        return;
+
     }
     catch (error) {
         console.error(chalk.red('error'), error);
@@ -112,7 +114,7 @@ async function whitelistAddress() {
 }
 
 //Requests challenge details
-//Returns amount, challenge_string, and partner_id
+//Returns amount, challenge, and partner_id
 async function requestChallengeDetails() {
 
     try {
@@ -171,7 +173,7 @@ async function checkIfAuthenticated() {
 
     try {
         const isAuthenticated = await authenticatedWithHydro();
-        console.log(chalk.greenBright('Are we authenticated with the Hydro API?'), isAuthenticated)
+        console.log(chalk.greenBright('Are we authenticated with the Hydro API?'), isAuthenticated.authenticated)
     }
     catch (error) {
         return Promise.reject(error);
@@ -250,7 +252,7 @@ async function performRaindrop() {
         //get abi for `getMoreTokens` method in the contract
         const getMoreTokensData = await HydroContract.methods.getMoreTokens().encodeABI();
         //get abi for `authenticate` method in the contract
-        const getAuthenticateData = await HydroContract.methods.authenticate(amount, challenge_string, partner_id).encodeABI();
+        const getAuthenticateData = await HydroContract.methods.authenticate(amount, challenge, partner_id).encodeABI();
 
         //estimate gas for `getMoreTokens`
         const gasForGetMoreTokens = await HydroContract.methods.getMoreTokens().estimateGas()
@@ -268,7 +270,7 @@ async function performRaindrop() {
         console.log(chalk.green('newNonce'),newNonce);
 
         //estimate gas for `authenticate`
-        const gasForAuthenticate = await HydroContract.methods.authenticate(amount, challenge_string, partner_id).estimateGas({from:accountAddress, gas:latestGasLimit});
+        const gasForAuthenticate = await HydroContract.methods.authenticate(amount, challenge, partner_id).estimateGas({from:accountAddress, gas:latestGasLimit});
         const gasHexForAuthenticate = web3.utils.toHex(gasForAuthenticate);
         console.log(chalk.green('gasForAuthenticate'),gasForAuthenticate);
 
