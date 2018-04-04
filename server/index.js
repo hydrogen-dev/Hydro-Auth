@@ -12,20 +12,20 @@ const Tx = require('ethereumjs-tx');
 const EUtil = require('ethereumjs-util');
 const abi = require('./interface.json'); //interface for contract
 
-const baseUrl = 'http://api.hedgeable.ml:31343'; //baseurl for Hydro API
+const baseUrl = 'https://dev.hydrogenplatform.com/hydro/v1';
 const ethAddress = 'wss://rinkeby.infura.io/ws'; //use websocket address to be able to listen to events
 const username = 'dkvmdl4bl1hdr2cka4pniojuc2'; //demo username for Hydro API (plug in your own)
 const key = 'l049h703idvj1huir3hsm4ga14'; //demo key for Hydro API (plug in your own)
-const contractAddress = '0xEFb8Ba35C4C502EA9035e093F59925C4B5B61482'; //contract address
+const contractAddress = '0xb16fff6adbca13013b97b79713e754f405dada7d'; //contract address
 const web3 = new Web3(ethAddress); // using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
 const HydroContract = new web3.eth.Contract(abi, contractAddress);
 
-let hydro_address_id = '96b043ba-a27c-44bb-af56-9e933cc94802'; //demo hydro_address_id from whitelisting
+let hydro_address_id = 'd8355c2b-7ffd-4139-9ff0-fc9217f14442'; //demo hydro_address_id from whitelisting
 let amount;
 let challenge;
 let partner_id;
-let accountAddress = '0xF082A16f34984Cb897baC3634E6962cA35825AB8'; //demo account address (plug in your own)
-let privateKey = '0x3479ace7f172c1ad48f31e4724ef7774b464a09b64a9b947b5df4b9413223218'; //demo private key associated with account address (plug in your own)
+let accountAddress = '0x57e3CF250c48bFe6B5eAbee71fC387b705321585'; //demo account address (plug in your own)
+let privateKey = '0x8875db785a5920c436d0e741bb334a3e0096d46357e3cf51364a9825a5b67fb2'; //demo private key associated with account address (plug in your own)
 
 app.use(cors());
 app.use(morgan('dev'));
@@ -93,15 +93,11 @@ async function createAddress() {
 async function whitelistAddress() {
 
     try {
+        const auth = new Buffer(username + ':' + key).toString('base64');
         const options = {
-            method: 'POST',
             uri: `${baseUrl}/whitelist/${accountAddress}`,
             headers: {
-              'Content-Type': 'application/json'
-            },
-            body: {
-                username: username,
-                key: key
+              'Authorization': `Basic ${auth}`
             },
             json: true
         };
@@ -118,18 +114,14 @@ async function whitelistAddress() {
 async function requestChallengeDetails() {
 
     try {
+        const auth = new Buffer(username + ':' + key).toString('base64');
         const options = {
-            method: 'POST',
             uri: `${baseUrl}/challenge`,
             headers: {
-              'Content-Type': 'application/json'
+              'Authorization': `Basic ${auth}`
             },
             qs: {
                 hydro_address_id: hydro_address_id
-            },
-            body: {
-                username: username,
-                key: key
             },
             json: true
         };
@@ -146,18 +138,14 @@ async function requestChallengeDetails() {
 async function authenticatedWithHydro() {
 
     try {
+        const auth = new Buffer(username + ':' + key).toString('base64');
         const options = {
-            method: 'POST',
             uri: `${baseUrl}/authenticate`,
             headers: {
-              'Content-Type': 'application/json'
+              'Authorization': `Basic ${auth}`
             },
             qs: {
                 hydro_address_id: hydro_address_id
-            },
-            body: {
-                username: username,
-                key: key
             },
             json: true
         };
