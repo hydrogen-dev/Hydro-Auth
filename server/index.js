@@ -12,20 +12,23 @@ const Tx = require('ethereumjs-tx');
 const EUtil = require('ethereumjs-util');
 const abi = require('./interface.json'); //interface for contract
 
-const baseUrl = 'https://dev.hydrogenplatform.com/hydro/v1';
+const baseUrl = 'https://sandbox.hydrogenplatform.com/hydro/v1';
 const ethAddress = 'wss://rinkeby.infura.io/ws'; //use websocket address to be able to listen to events
-const username = 'dkvmdl4bl1hdr2cka4pniojuc2'; //demo username for Hydro API (plug in your own)
-const key = 'l049h703idvj1huir3hsm4ga14'; //demo key for Hydro API (plug in your own)
-const contractAddress = '0xb16fff6adbca13013b97b79713e754f405dada7d'; //contract address
+const oauthBaseUrl = 'https://sandbox.hydrogenplatform.com/authorization/v1'; //baseurl for oauth API
+const client_id = '8bcjegi2rg3jdyjxl41r3m6khg'; //demo username for Hydro API (plug in your own)
+const client_secret = '8qyeutqj7way17zie2k7khnghe'; //demo key for Hydro API (plug in your own)
+
+const contractAddress = '0x4959c7f62051D6b2ed6EaeD3AAeE1F961B145F20'; //contract address on Sandbox
 const web3 = new Web3(ethAddress); // using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
 const HydroContract = new web3.eth.Contract(abi, contractAddress);
 
-let hydro_address_id = 'd8355c2b-7ffd-4139-9ff0-fc9217f14442'; //demo hydro_address_id from whitelisting
+let access_token;
+let hydro_address_id = 'c74c1f74-ab39-45c8-86c1-51e39769d0a0'; //demo hydro_address_id from whitelisting
 let amount;
 let challenge;
 let partner_id;
-let accountAddress = '0x57e3CF250c48bFe6B5eAbee71fC387b705321585'; //demo account address (plug in your own)
-let privateKey = '0x8875db785a5920c436d0e741bb334a3e0096d46357e3cf51364a9825a5b67fb2'; //demo private key associated with account address (plug in your own)
+let accountAddress = '0xB1Efb9349c6754b8Df2Ae78E8C65286BC84Db5d8'; //demo account address (plug in your own)
+let privateKey = '0x051c55700f8a335719f731a3882f16929d75d55effa594dabbf7e93635a96ae9'; //demo private key associated with account address (plug in your own)
 
 app.use(cors());
 app.use(morgan('dev'));
@@ -37,6 +40,14 @@ app.use(bodyParser.json());
 async function main() {
 
     try {
+
+        if(!access_token) {
+          //authenticate with Oauth API
+          console.log(chalk.magentaBright('authenticating with OAuth...'));
+          access_token = await authenticateWithOauth();
+          console.log(chalk.green('access_token'), access_token)
+        }
+
         if(!accountAddress) {
             //create ethereum account via web3
             console.log(chalk.magentaBright('creating an ethereum account...'));
@@ -44,22 +55,27 @@ async function main() {
             console.log(chalk.green('account'),account);
             accountAddress = account.address;
             privateKey = account.privateKey;
-        } 
+        }
+
         if(!hydro_address_id) {
             //one-time whitelist via Hydro API
             console.log(chalk.magentaBright('requesting to whitelist via Hydro API...'));
-            hydro_address_id = await whitelistAddress().hydro_address_id;
+            const result = await whitelistAddress();
+            hydro_address_id = result.hydro_address_id
             console.log(chalk.green('hydro_address_id'),hydro_address_id);
         }
-        if(!amount && !challenge && !partner_id) {
+
+        // if(!amount && !challenge && !partner_id) {
             //ask for "challenge details" via Hydro API
             console.log(chalk.magentaBright('requesting challenge details via Hydro API...'));
             const data = await requestChallengeDetails();
-            console.log(chalk.green('data'),data);
+            console.log(chalk.green('amount'),data.amount);
+            console.log(chalk.green('challenge'),data.challenge);
+            console.log(chalk.green('partner_id'),data.partner_id);
             amount = data.amount;
             challenge = data.challenge;
             partner_id = data.partner_id;
-        }
+        // }
         //perform "raindrop" by calling methods in the contract
         console.log(chalk.magentaBright('starting to perform raindrop...'));
         await performRaindrop();
@@ -72,6 +88,29 @@ async function main() {
     }
     catch (error) {
         console.error(chalk.red('error'), error);
+    }
+
+}
+
+async function authenticateWithOauth() {
+
+    try {
+        const auth = new Buffer(client_id + ':' + client_secret).toString('base64')
+        const options = {
+            method: 'POST',
+            uri: `${oauthBaseUrl}/oauth/token?grant_type=client_credentials`,
+            headers: {
+              'Authorization': `Basic ${auth}`
+            },
+            json: true
+        };
+        const credentials = await request(options);
+        console.log(chalk.greenBright('And the access token is....'), credentials.access_token)
+        return credentials.access_token;
+
+    }
+    catch (error) {
+        return Promise.reject(error);
     }
 
 }
@@ -93,11 +132,14 @@ async function createAddress() {
 async function whitelistAddress() {
 
     try {
-        const auth = new Buffer(username + ':' + key).toString('base64');
         const options = {
-            uri: `${baseUrl}/whitelist/${accountAddress}`,
+            method: 'POST',
+            uri: `${baseUrl}/whitelist`,
             headers: {
-              'Authorization': `Basic ${auth}`
+              'Authorization': `Bearer ${access_token}`
+            },
+            body: {
+              address: accountAddress
             },
             json: true
         };
@@ -114,14 +156,17 @@ async function whitelistAddress() {
 async function requestChallengeDetails() {
 
     try {
-        const auth = new Buffer(username + ':' + key).toString('base64');
         const options = {
+            method: 'POST',
             uri: `${baseUrl}/challenge`,
             headers: {
-              'Authorization': `Basic ${auth}`
+              'Authorization': `Bearer ${access_token}`
             },
-            qs: {
-                hydro_address_id: hydro_address_id
+            // qs: {
+            //     hydro_address_id: hydro_address_id
+            // },
+            body: {
+              hydro_address_id: hydro_address_id
             },
             json: true
         };
@@ -138,11 +183,10 @@ async function requestChallengeDetails() {
 async function authenticatedWithHydro() {
 
     try {
-        const auth = new Buffer(username + ':' + key).toString('base64');
         const options = {
             uri: `${baseUrl}/authenticate`,
             headers: {
-              'Authorization': `Basic ${auth}`
+              'Authorization': `Bearer ${access_token}`
             },
             qs: {
                 hydro_address_id: hydro_address_id
@@ -154,7 +198,7 @@ async function authenticatedWithHydro() {
     catch (error) {
         return Promise.reject(error);
     }
-    
+
 }
 
 async function checkIfAuthenticated() {
@@ -228,7 +272,7 @@ async function performRaindrop() {
         const latestGasLimit = getBlock.gasLimit;
         const latestGasLimitHex = web3.utils.toHex(latestGasLimit);
         console.log(chalk.green('latestGasLimit'),latestGasLimit);
-        
+
         //convert private key into buffer
         const privateKeyBuffer = EUtil.toBuffer(privateKey, 'hex');
 
