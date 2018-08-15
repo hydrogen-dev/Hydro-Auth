@@ -95,7 +95,7 @@ async function main() {
 async function authenticateWithOauth() {
 
     try {
-        const auth = new Buffer(client_id + ':' + client_secret).toString('base64')
+        const auth = new Buffer.from(client_id + ':' + client_secret).toString('base64')
         const options = {
             method: 'POST',
             uri: `${oauthBaseUrl}/oauth/token?grant_type=client_credentials`,
@@ -105,7 +105,6 @@ async function authenticateWithOauth() {
             json: true
         };
         const credentials = await request(options);
-        console.log(chalk.greenBright('And the access token is....'), credentials.access_token)
         return credentials.access_token;
 
     }
