@@ -4,7 +4,7 @@
 <p>
 	<ol>
 		<li>Clone the project with <code>git clone https://github.com/rachydro/Hydro-Auth.git</code>.</li>
-		<li>Make sure <a href="https://nodejs.org/en/" target="_blank">node</a> and <a href="https://docs.npmjs.com/getting-started/installing-node" target="_blank">npm</a> is installed on your machine. This app was built with <code>node v10.4.1</code>, <code>npm 6.1.0</code>, and <code>web3.js 1.0.0-beta.28</code>.</li>
+		<li>Make sure <a href="https://nodejs.org/en/" target="_blank">node</a> and <a href="https://docs.npmjs.com/getting-started/installing-node" target="_blank">npm</a> is installed on your machine. This app was built with <code>node v10.4.1</code>, <code>npm 6.1.0</code>, and <code>web3.js 1.0.0-beta.32</code>.</li>
 		<li>Run <code>npm install</code> to install required dependencies.</li>
 		<li>Run <code>npm start</code> to start the app at port <code>3000</code>.</li>
 		<li>Check your terminal to see the outputs! You can also find in code comments for step-by-step instructions.</li>
