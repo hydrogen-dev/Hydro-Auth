@@ -10,7 +10,11 @@ const request = require('request-promise');
 const nodeModulesPath = path.join(__dirname, '../node_modules');
 const Tx = require('ethereumjs-tx');
 const EUtil = require('ethereumjs-util');
-const abi = require('./interface.json'); //interface for contract
+const abi = require('../interface.json'); //interface for contract
+const config = require('./_config');
+
+const redis = require('redis');
+const client = redis.createClient();
 
 const baseUrl = 'https://sandbox.hydrogenplatform.com/hydro/v1';
 const ethAddress = 'wss://rinkeby.infura.io/ws'; //use websocket address to be able to listen to events
@@ -35,6 +39,15 @@ app.use(morgan('dev'));
 app.use(express.static(nodeModulesPath));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+client.on('error', function(err){
+  console.log('Something went wrong ', err)
+});
+client.set('my test key', 'my test value', redis.print);
+client.get('my test key', function(error, result) {
+  if (error) throw error;
+  console.log('GET result ->', result)
+});
 
 //our main script
 async function main() {
@@ -65,17 +78,14 @@ async function main() {
             console.log(chalk.green('hydro_address_id'),hydro_address_id);
         }
 
-        // if(!amount && !challenge && !partner_id) {
-            //ask for "challenge details" via Hydro API
-            console.log(chalk.magentaBright('requesting challenge details via Hydro API...'));
-            const data = await requestChallengeDetails();
-            console.log(chalk.green('amount'),data.amount);
-            console.log(chalk.green('challenge'),data.challenge);
-            console.log(chalk.green('partner_id'),data.partner_id);
-            amount = data.amount;
-            challenge = data.challenge;
-            partner_id = data.partner_id;
-        // }
+        //ask for "challenge details" via Hydro API
+        console.log(chalk.magentaBright('requesting challenge details via Hydro API...'));
+        const data = await requestChallengeDetails();
+        ({ amount, challenge, partner_id } = data);
+        console.log(chalk.green('amount'), amount);
+        console.log(chalk.green('challenge'), challenge);
+        console.log(chalk.green('partner_id'), partner_id);
+
         //perform "raindrop" by calling methods in the contract
         console.log(chalk.magentaBright('starting to perform raindrop...'));
         await performRaindrop();
@@ -161,9 +171,6 @@ async function requestChallengeDetails() {
             headers: {
               'Authorization': `Bearer ${access_token}`
             },
-            // qs: {
-            //     hydro_address_id: hydro_address_id
-            // },
             body: {
               hydro_address_id: hydro_address_id
             },
@@ -324,7 +331,7 @@ app.use(function (err, req, res, next) {
 app.listen(3000, function() {
     console.log(chalk.bold('listening on port 3000...'));
     //execute our script!
-    main();
+    // main();
 });
 
 module.exports = app;

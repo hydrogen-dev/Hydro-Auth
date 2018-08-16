@@ -13,14 +13,19 @@
     "morgan": "^1.9.0",
     "nodemon": "^1.14.11",
     "path": "^0.12.7",
+    "redis": "^2.8.0",
     "request": "^2.83.0",
     "request-promise": "^4.2.2",
     "web3": "^1.0.0-beta.35"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "chai-http": "^4.0.0",
+    "mocha": "^5.2.0"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
