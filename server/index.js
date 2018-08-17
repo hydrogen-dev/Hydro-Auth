@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -11,19 +13,15 @@ const nodeModulesPath = path.join(__dirname, '../node_modules');
 const Tx = require('ethereumjs-tx');
 const EUtil = require('ethereumjs-util');
 const abi = require('../interface.json'); //interface for contract
-const config = require('./_config');
 
-const redis = require('redis');
-const client = redis.createClient();
+const baseUrl = process.env.HYDRO_URL;
+const network = process.env.NETWORK_URL; //use websocket address to be able to listen to events
+const oauthBaseUrl = process.env.OAUTH_URL; //baseurl for oauth API
+const client_id = process.env.CLIENT_ID; //username for Hydro API
+const client_secret = process.env.CLIENT_SECRET; //key for Hydro API
+const contractAddress = process.env.CONTRACT_ADDRESS; //contract address on Sandbox
 
-const baseUrl = 'https://sandbox.hydrogenplatform.com/hydro/v1';
-const ethAddress = 'wss://rinkeby.infura.io/ws'; //use websocket address to be able to listen to events
-const oauthBaseUrl = 'https://sandbox.hydrogenplatform.com/authorization/v1'; //baseurl for oauth API
-const client_id = '8bcjegi2rg3jdyjxl41r3m6khg'; //demo username for Hydro API (plug in your own)
-const client_secret = '8qyeutqj7way17zie2k7khnghe'; //demo key for Hydro API (plug in your own)
-
-const contractAddress = '0x4959c7f62051D6b2ed6EaeD3AAeE1F961B145F20'; //contract address on Sandbox
-const web3 = new Web3(ethAddress); // using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
+const web3 = new Web3(network); // using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
 const HydroContract = new web3.eth.Contract(abi, contractAddress);
 
 let access_token;
@@ -39,15 +37,6 @@ app.use(morgan('dev'));
 app.use(express.static(nodeModulesPath));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
-client.on('error', function(err){
-  console.log('Something went wrong ', err)
-});
-client.set('my test key', 'my test value', redis.print);
-client.get('my test key', function(error, result) {
-  if (error) throw error;
-  console.log('GET result ->', result)
-});
 
 //our main script
 async function main() {
@@ -66,29 +55,28 @@ async function main() {
             console.log(chalk.magentaBright('creating an ethereum account...'));
             account = await createAddress();
             console.log(chalk.green('account'),account);
-            accountAddress = account.address;
-            privateKey = account.privateKey;
+            ({ accountAddress, privateKey } = account);
         }
 
         if(!hydro_address_id) {
             //one-time whitelist via Hydro API
             console.log(chalk.magentaBright('requesting to whitelist via Hydro API...'));
             const result = await whitelistAddress();
-            hydro_address_id = result.hydro_address_id
+            ({ hydro_address_id } = result);
             console.log(chalk.green('hydro_address_id'),hydro_address_id);
         }
 
         //ask for "challenge details" via Hydro API
         console.log(chalk.magentaBright('requesting challenge details via Hydro API...'));
-        const data = await requestChallengeDetails();
-        ({ amount, challenge, partner_id } = data);
+        const challengeDetails = await requestChallengeDetails();
+        ({ amount, challenge, partner_id } = challengeDetails);
         console.log(chalk.green('amount'), amount);
         console.log(chalk.green('challenge'), challenge);
         console.log(chalk.green('partner_id'), partner_id);
 
         //perform "raindrop" by calling methods in the contract
         console.log(chalk.magentaBright('starting to perform raindrop...'));
-        await performRaindrop();
+        await performRaindrop(accountAddress, privateKey, amount, challenge, partner_id);
 
         //check if authenticated via Hydro API
         console.log(chalk.magentaBright('checking if we are authenticated...'));
@@ -210,8 +198,8 @@ async function authenticatedWithHydro() {
 async function checkIfAuthenticated() {
 
     try {
-        const isAuthenticated = await authenticatedWithHydro();
-        console.log(chalk.greenBright('Are we authenticated with the Hydro API?'), isAuthenticated.authenticated)
+        const { authentication_id } = await authenticatedWithHydro();
+        console.log(chalk.greenBright('authentication_id'), authentication_id)
     }
     catch (error) {
         return Promise.reject(error);
@@ -261,7 +249,7 @@ async function sendSignedTransaction(privateKey, nonce, gasPrice, gasLimit, to, 
 }
 
 //via web3, perform "raindrop" by calling `getMoreTokens` and `authenticate` methods in the contract
-async function performRaindrop() {
+async function performRaindrop(accountAddress, privateKey, amount, challenge, partner_id) {
 
     try {
         //get gas price
@@ -334,4 +322,4 @@ app.listen(3000, function() {
     // main();
 });
 
-module.exports = app;
+module.exports = performRaindrop;
