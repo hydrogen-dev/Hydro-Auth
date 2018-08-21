@@ -1,16 +1,16 @@
 require('dotenv').config()
 const baseUrl = process.env.HYDRO_URL;
-const oauthBaseUrl = process.env.OAUTH_URL; //baseurl for oauth API
-const client_id = process.env.CLIENT_ID; //username for Hydro API
-const client_secret = process.env.CLIENT_SECRET; //key for Hydro API
-const contractAddress = process.env.CONTRACT_ADDRESS; //contract address on Sandbox
-const network = process.env.NETWORK_URL; //use websocket address to be able to listen to events
+const oauthBaseUrl = process.env.OAUTH_URL;
+const client_id = process.env.CLIENT_ID;
+const client_secret = process.env.CLIENT_SECRET;
+const contractAddress = process.env.CONTRACT_ADDRESS;
+const network = process.env.NETWORK_URL;
 
 const path = require('path');
 const nodeModulesPath = path.join(__dirname, '../node_modules');
 const Web3 = require('web3');
-const web3 = new Web3(network); // using web3.js version 1.0.0-beta.28, node v8.9.1, npm 5.5.1
-const abi = require('../interface.json'); //interface for contract
+const web3 = new Web3(network);
+const abi = require('../interface.json');
 const HydroContract = new web3.eth.Contract(abi, contractAddress);
 const { createAddress, performRaindrop } = require('../web3-methods.js');
 
@@ -21,12 +21,13 @@ chai.use(chaiHttp);
 
 describe('authenticate with Raindrop API', function() {
   let access_token;
-  let hydro_address_id = 'ee1df97c-5c38-48c0-b46c-70bc0b69bfb1'; //demo hydro_address_id from whitelisting
+  let hydro_address_id = 'ee1df97c-5c38-48c0-b46c-70bc0b69bfb1'; //demo hydro_address_id from whitelisting (plug in your own)
+  let address = '0xA3C0336928bc8964512847a1193D0b4Cc6Dc19C9'; //demo account address (plug in your own)
+  let privateKey = '0xc16f09068c0f3323b3f02bf39e8d1e68ea329874b0379f724528478f5dd3860e'; //demo private key associated with account address (plug in your own)
+
   let amount;
   let challenge;
   let partner_id;
-  let address = '0xA3C0336928bc8964512847a1193D0b4Cc6Dc19C9'; //demo account address (plug in your own)
-  let privateKey = '0xc16f09068c0f3323b3f02bf39e8d1e68ea329874b0379f724528478f5dd3860e'; //demo private key associated with account address (plug in your own)
 
   before(async function() {
       try {
