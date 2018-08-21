@@ -94,7 +94,7 @@ async function performRaindrop(web3, HydroContract, contractAddress, accountAddr
         //get receipt for requesting more hydros
         console.log(chalk.magentaBright('requesting more tokens...'));
         const getMoreTokensReceipt = await sendSignedTransaction(web3, privateKeyBuffer, nonceHex, priceHex, gasHexForGetMoreTokens, contractAddress, accountAddress, getMoreTokensData);
-        console.log(chalk.green('getMoreTokensReceipt'),getMoreTokensReceipt);
+        console.log(chalk.green('getMoreTokensReceipt received'));
 
         //update nonce for next transaction
         const newNonce = await web3.eth.getTransactionCount(accountAddress);
@@ -109,7 +109,7 @@ async function performRaindrop(web3, HydroContract, contractAddress, accountAddr
         //get receipt for authenticate
         console.log(chalk.magentaBright('requesting to authenticate...'));
         const authenticateReceipt = await sendSignedTransaction(web3, privateKeyBuffer, newNonceHex, priceHex, gasHexForAuthenticate, contractAddress, accountAddress, getAuthenticateData);
-        console.log(chalk.green('authenticateReceipt'),authenticateReceipt);
+        console.log(chalk.green('authenticateReceipt received'));
     }
     catch (error) {
         return Promise.reject(error);
