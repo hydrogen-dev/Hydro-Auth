@@ -34,7 +34,7 @@ describe('authenticate with Raindrop API', function() {
         this.timeout(10000);
 
         if(!access_token) {
-          const auth = new Buffer.from(client_id + ':' + client_secret).toString('base64')
+          const auth = new Buffer.from(`${client_id}:${client_secret}`).toString('base64')
           const url = `${oauthBaseUrl}/oauth/token?grant_type=client_credentials`
           const res = await chai.request(url)
           .post('')

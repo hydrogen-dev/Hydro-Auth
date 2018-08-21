@@ -94,7 +94,7 @@ async function main() {
 async function authenticateWithOauth() {
 
     try {
-        const auth = new Buffer.from(client_id + ':' + client_secret).toString('base64')
+        const auth = new Buffer.from(`${client_id}:${client_secret}`).toString('base64')
         const options = {
             method: 'POST',
             uri: `${oauthBaseUrl}/oauth/token?grant_type=client_credentials`,
